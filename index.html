@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Backtest Multi-Mercado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .step-card {
+            transition: all 0.3s ease-in-out; opacity: 0.5; pointer-events: none;
+            transform: translateY(10px); display: none;
+        }
+        .step-card.active, .step-card.done { display: block; }
+        .step-card.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .step-card.done { opacity: 0.7; transform: translateY(0); border-left-color: #22c55e; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
+            width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chart-container { position: relative; height: 500px; width: 100%; }
+        .data-table-container { max-height: 500px; overflow-y: auto; }
+        [contenteditable]:focus { outline: 2px solid #3b82f6; background-color: #374151; }
+        .gemini-btn {
+            background-color: #4f46e5; color: white;
+            transition: background-color 0.3s;
+        }
+        .gemini-btn:hover { background-color: #4338ca; }
+        .prose { color: #d1d5db; }
+        .prose h3 { color: #6ee7b7; }
+        .prose h4 { color: #5eead4; }
+        .prose strong { color: #f0fdf4; }
+        .prose ul > li::before { background-color: #6ee7b7; }
+        .probability-table-container { max-height: 600px; overflow-y: auto; }
+        .page-tab { transition: all 0.2s ease-in-out; }
+        .page-tab.active { background-color: #4f46e5; color: white; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-4 sm:p-6 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-6">
+            <h1 id="mainTitle" class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Backtest de Média Móvel</h1>
+            <p class="text-gray-400 mt-2">Plataforma de backtest multi-mercado.</p>
+        </header>
+
+        <!-- NAVEGAÇÃO POR PÁGINAS/ATIVOS -->
+        <nav class="mb-8 p-2 bg-gray-800 rounded-lg shadow-md">
+            <div id="pageTabs" class="flex flex-wrap items-center justify-center gap-2">
+                <!-- As abas serão geradas aqui pelo JS -->
+            </div>
+        </nav>
+
+        <div class="relative">
+            <!-- BOTÃO DE RECOMEÇAR -->
+            <button id="resetPageBtn" title="Limpar todos os dados e recomeçar a análise para este ativo." class="absolute top-0 right-0 z-10 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span>Recomeçar Análise</span>
+            </button>
+            <div id="mainContent" class="space-y-8">
+            <!-- Etapa 1: Carregar Arquivo -->
+            <div id="step1" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1</div>
+                    <h2 class="text-2xl font-semibold ml-4">Fonte de Dados</h2>
+                </div>
+                <p class="text-gray-400 mb-4">Inicie carregando um novo arquivo CSV para este ativo.</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div id="uploadArea" class="flex-1">
+                        <input type="file" id="csvFile" accept=".csv" class="hidden">
+                        <label for="csvFile" class="w-full h-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center justify-center transition">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <span>Carregar Novo CSV</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="fileStatus" class="mt-4 text-gray-300 hidden"></div>
+                <div id="step1Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
+            </div>
+
+            <!-- Etapa 1.5: Confirmar Separador -->
+            <div id="separatorStep" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                <div class="flex items-center mb-4">
+                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1.5</div>
+                    <h2 class="text-2xl font-semibold ml-4">Confirmar Separador de Coluna</h2>
+                </div>
+                <p class="text-gray-400 mb-4">Escolha o separador para que os dados na tabela abaixo fiquem corretamente divididos em colunas.</p>
+                <div id="delimiterOptions" class="flex flex-wrap gap-x-6 gap-y-2 items-center mb-4">
+                    <label class="flex items-center space-x-2 text-white cursor-pointer">
+                        <input type="radio" name="delimiter" value="," class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                        <span>Vírgula ( , )</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-white cursor-pointer">
+                        <input type="radio" name="delimiter" value=";" class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                        <span>Ponto e vírgula ( ; )</span>
+                    </label>
+                </div>
+                <p class="text-gray-400 mb-2 font-semibold">Pré-visualização dos Dados:</p>
+                <div id="dataParsePreview" class="bg-gray-900 p-2 rounded-md overflow-x-auto"></div>
+                <button id="confirmSeparatorBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Confirmar Separador e Continuar
+                </button>
+            </div>
+
+            <!-- Etapa 2: Mapear Colunas -->
+            <div id="step2" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                <div class="flex items-center mb-4">
+                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">2</div>
+                    <h2 class="text-2xl font-semibold ml-4">Mapear Colunas</h2>
+                </div>
+                <p class="text-gray-400 mb-6">Associe as colunas detetadas com os campos necessários. <strong class="text-gray-200">Data, Abertura, Máxima, Mínima, e Fechamento</strong> são necessários para o gráfico de candlestick.</p>
+                <div id="mappingUI" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                <div id="step2Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
+                <button id="confirmMappingBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Confirmar Mapeamento e Validar
+                </button>
+            </div>
+
+            <!-- Etapa 3: Planilha de Dados e Execução -->
+            <div id="step3" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                <div class="flex items-center mb-4">
+                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">3</div>
+                    <h2 class="text-2xl font-semibold ml-4">Configuração e Execução</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label for="smaPeriod" class="block mb-2 text-sm font-medium text-gray-300">Período da Média Móvel (para Backtest Simples)</label>
+                        <div class="flex items-center gap-2">
+                           <input type="number" id="smaPeriod" value="21" min="2" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="contractSize" id="contractSizeLabel" class="block mb-2 text-sm font-medium text-gray-300">Tamanho do Contrato</label>
+                        <input type="number" id="contractSize" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readonly>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <button id="addNewRowBtn" title="Adicionar uma nova linha de dados no final da tabela" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
+                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Adicionar Nova Linha
+                    </button>
+                </div>
+                <div id="statusMessage" class="mb-4"></div>
+                <h3 class="font-semibold text-lg mb-2 text-gray-300">Dados para o Backtest (Editável)</h3>
+                <div class="data-table-container rounded-lg border border-gray-700">
+                    <table id="dataPreview" class="min-w-full text-sm text-left text-gray-300 bg-gray-800"></table>
+                </div>
+                <button id="runBacktestBtn" class="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg">
+                    Rodar Backtest Simples
+                </button>
+            </div>
+            </div>
+        </div>
+        
+        <div id="analysisContent">
+        <!-- Seção de Resultados -->
+        <div id="resultsSection" class="hidden mt-12">
+            <h2 id="resultsTitle" class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Resultados do Backtest</h2>
+            <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg mb-8">
+                <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Gráfico Interativo de Preços e Sinais</h3>
+                <div class="chart-container"><canvas id="priceChart"></canvas></div>
+            </div>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div id="statsSection" class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+                    <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Estatísticas Principais</h3>
+                    <div id="statsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+                <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+                    <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Curva de Património</h3>
+                    <div class="chart-container" style="height: 400px"><canvas id="equityChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+
+    </div>
+
+    <!-- MODAL PERSONALIZADO -->
+    <div id="customModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md border border-gray-700">
+            <h3 id="modalTitle" class="text-xl font-bold mb-4 text-white"></h3>
+            <p id="modalMessage" class="text-gray-300 mb-6"></p>
+            <div id="modalActions" class="flex justify-end gap-4">
+                <!-- Botões serão injetados aqui pelo JS -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // escopo global para estado da aplicação, gráficos e arquivo atual
+        let appState = {};
+        let activePageKey = 'bgi';
+        let priceChart = null, equityChart = null, wfaEquityChart = null, mcChart = null, currentFile = null;
+        
+        // Definição dos mercados disponíveis na plataforma
+        const markets = {
+            bgi: { name: 'Boi Gordo', code: 'BGI', contractSize: 330, unit: '@', currency: 'BRL' },
+            ccm: { name: 'Milho', code: 'CCM', contractSize: 450, unit: 'sacas', currency: 'BRL' },
+            sjc: { name: 'Soja', code: 'SJC', contractSize: 450, unit: 'sacas', currency: 'USD' },
+            dol: { name: 'Dólar Cheio', code: 'DOL', contractSize: 50000, unit: 'US$', currency: 'BRL' },
+            wdo: { name: 'Mini Dólar', code: 'WDO', contractSize: 10000, unit: 'US$', currency: 'BRL' },
+            icf: { name: 'Café Arábica', code: 'ICF', contractSize: 100, unit: 'sacas', currency: 'USD' }
+        };
+
+        // Mapeamento dos elementos da UI para fácil acesso
+        const ui = {
+            mainTitle: document.getElementById('mainTitle'),
+            pageTabs: document.getElementById('pageTabs'),
+            resetPageBtn: document.getElementById('resetPageBtn'),
+            step1: document.getElementById('step1'), 
+            step2: document.getElementById('step2'), 
+            step3: document.getElementById('step3'),
+            separatorStep: document.getElementById('separatorStep'), 
+            csvFileInput: document.getElementById('csvFile'), 
+            fileStatus: document.getElementById('fileStatus'), 
+            step1Error: document.getElementById('step1Error'),
+            delimiterOptions: document.getElementById('delimiterOptions'), 
+            dataParsePreview: document.getElementById('dataParsePreview'), 
+            confirmSeparatorBtn: document.getElementById('confirmSeparatorBtn'),
+            mappingUI: document.getElementById('mappingUI'), 
+            confirmMappingBtn: document.getElementById('confirmMappingBtn'), 
+            step2Error: document.getElementById('step2Error'),
+            contractSizeInput: document.getElementById('contractSize'),
+            contractSizeLabel: document.getElementById('contractSizeLabel'),
+            smaPeriodInput: document.getElementById('smaPeriod'),
+            addNewRowBtn: document.getElementById('addNewRowBtn'),
+            statusMessage: document.getElementById('statusMessage'),
+            dataPreview: document.getElementById('dataPreview'), 
+            runBacktestBtn: document.getElementById('runBacktestBtn'),
+            resultsSection: document.getElementById('resultsSection'),
+            resultsTitle: document.getElementById('resultsTitle'),
+            statsContainer: document.getElementById('statsContainer'),
+            // Modal elements
+            customModal: document.getElementById('customModal'),
+            modalTitle: document.getElementById('modalTitle'),
+            modalMessage: document.getElementById('modalMessage'),
+            modalActions: document.getElementById('modalActions'),
+        };
+
+        /**
+         * Retorna o estado inicial para uma nova página/ativo.
+         */
+        function getInitialPageState() {
+            return {
+                step: 1,
+                fileContentChunk: '',
+                headers: [],
+                rawData: [],
+                mappedData: [],
+                hasBacktestRun: false,
+            };
+        }
+        
+        // --- LÓGICA DO MODAL ---
+        function showModal(title, message, buttons) {
+            ui.modalTitle.textContent = title;
+            ui.modalMessage.innerHTML = message; // Use innerHTML to allow for simple formatting
+            ui.modalActions.innerHTML = ''; // Limpa botões antigos
+
+            buttons.forEach(btnInfo => {
+                const button = document.createElement('button');
+                button.textContent = btnInfo.text;
+                button.className = `font-bold py-2 px-4 rounded-lg transition ${btnInfo.class}`;
+                button.onclick = btnInfo.callback;
+                ui.modalActions.appendChild(button);
+            });
+
+            ui.customModal.classList.remove('hidden');
+            ui.customModal.classList.add('flex');
+        }
+
+        function hideModal() {
+            ui.customModal.classList.add('hidden');
+            ui.customModal.classList.remove('flex');
+        }
+
+        // --- GERENCIAMENTO DE ESTADO E PÁGINA ---
+
+        function saveStateToLocalStorage() {
+            localStorage.setItem('appState', JSON.stringify(appState));
+            localStorage.setItem('activePageKey', activePageKey);
+        }
+
+        function loadStateFromLocalStorage() {
+            const savedState = localStorage.getItem('appState');
+            const savedPage = localStorage.getItem('activePageKey');
+            if (savedState) {
+                appState = JSON.parse(savedState);
+                Object.keys(appState).forEach(pageKey => {
+                    if (appState[pageKey].mappedData) {
+                        appState[pageKey].mappedData = appState[pageKey].mappedData.map(row => ({
+                            ...row,
+                            date: new Date(row.date)
+                        }));
+                    }
+                });
+            }
+            if (savedPage && markets[savedPage]) {
+                activePageKey = savedPage;
+            }
+        }
+
+        function createPageTabs() {
+            ui.pageTabs.innerHTML = '';
+            Object.keys(markets).forEach(key => {
+                if (!appState[key]) {
+                    appState[key] = getInitialPageState();
+                }
+                const market = markets[key];
+                const tab = document.createElement('button');
+                tab.id = `tab-${key}`;
+                tab.className = 'page-tab py-2 px-4 rounded-md font-semibold bg-gray-700 hover:bg-gray-600';
+                tab.textContent = market.name;
+                tab.addEventListener('click', () => switchPage(key));
+                ui.pageTabs.appendChild(tab);
+            });
+        }
+
+        function switchPage(pageKey) {
+            activePageKey = pageKey;
+            
+            document.querySelectorAll('.page-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${pageKey}`).classList.add('active');
+
+            const market = markets[pageKey];
+            ui.mainTitle.textContent = `Backtest de Média Móvel - ${market.name}`;
+            ui.contractSizeInput.value = market.contractSize;
+            ui.contractSizeLabel.textContent = `Tamanho do Contrato (${market.unit})`;
+            
+            renderCurrentPage();
+            saveStateToLocalStorage();
+        }
+
+        function renderCurrentPage() {
+            const state = appState[activePageKey];
+            
+            const allSteps = [ui.step1, ui.separatorStep, ui.step2, ui.step3];
+            allSteps.forEach(s => s.style.display = 'none');
+            ui.resultsSection.classList.add('hidden');
+            
+            const stepMap = { 1: ui.step1, 1.5: ui.separatorStep, 2: ui.step2, 3: ui.step3 };
+            Object.values(stepMap).forEach(el => el.classList.remove('active', 'done'));
+
+            if (stepMap[state.step]) {
+                const currentStep = stepMap[state.step];
+                currentStep.style.display = 'block';
+                currentStep.classList.add('active');
+                
+                let stepsOrder = [1, 1.5, 2, 3];
+                let currentIndex = stepsOrder.indexOf(state.step);
+
+                for(let j=0; j < currentIndex; j++){
+                    const stepKey = stepsOrder[j];
+                    const stepEl = stepMap[stepKey];
+                     if (stepEl) {
+                        stepEl.style.display = 'block';
+                        stepEl.classList.add('done');
+                    }
+                }
+            }
+
+            if(state.step === 3 && state.mappedData.length > 0) {
+                renderEditableTable();
+            }
+
+            if (state.hasBacktestRun) {
+                ui.resultsSection.classList.remove('hidden');
+            }
+        }
+        
+        ui.resetPageBtn.addEventListener('click', () => {
+            showModal(
+                'Confirmar Recomeço',
+                `Tem a certeza de que deseja apagar todos os dados e recomeçar a análise para <strong>${markets[activePageKey].name}</strong>? Esta ação não pode ser desfeita.`,
+                [
+                    { 
+                        text: 'Cancelar', 
+                        class: 'bg-gray-600 hover:bg-gray-500', 
+                        callback: hideModal 
+                    },
+                    { 
+                        text: 'Confirmar e Apagar', 
+                        class: 'bg-red-600 hover:bg-red-700', 
+                        callback: () => {
+                            appState[activePageKey] = getInitialPageState();
+                            [priceChart, equityChart].forEach(chart => {
+                                if(chart) chart.destroy();
+                            });
+                            priceChart = equityChart = null;
+                            switchPage(activePageKey);
+                            hideModal();
+                        }
+                    }
+                ]
+            );
+        });
+
+        // --- FLUXO DE CARREGAMENTO DE DADOS (ETAPAS 1-3) ---
+
+        ui.csvFileInput.addEventListener('change', (event) => {
+            currentFile = event.target.files[0];
+            if (!currentFile) return;
+            appState[activePageKey].fileContentChunk = '';
+            showStatus('Lendo amostra do arquivo...', true);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                appState[activePageKey].fileContentChunk = e.target.result.split(/[\r\n]+/).slice(0, 10).join('\n');
+                autoDetectDelimiterAndSetupPreview();
+                showStatus(`Arquivo "${currentFile.name}" carregado.`, false);
+                appState[activePageKey].step = 1.5;
+                renderCurrentPage();
+            };
+            reader.readAsText(currentFile, 'UTF-8');
+        });
+
+        function autoDetectDelimiterAndSetupPreview() {
+            const content = appState[activePageKey].fileContentChunk;
+            const commaParse = Papa.parse(content, { delimiter: ',', header: true });
+            const semicolonParse = Papa.parse(content, { delimiter: ';', header: true });
+            const commaCols = (commaParse.meta.fields || []).length;
+            const semicolonCols = (semicolonParse.meta.fields || []).length;
+            if (semicolonCols > commaCols && semicolonCols > 1) {
+                document.querySelector('input[name="delimiter"][value=";"]').checked = true;
+            } else {
+                document.querySelector('input[name="delimiter"][value=","]').checked = true;
+            }
+            updateDataParsePreview();
+        }
+
+        ui.delimiterOptions.addEventListener('change', updateDataParsePreview);
+
+        function updateDataParsePreview() {
+            const selectedDelimiter = document.querySelector('input[name="delimiter"]:checked').value;
+            const content = appState[activePageKey].fileContentChunk;
+            const parsed = Papa.parse(content, { delimiter: selectedDelimiter, header: true });
+            if (!parsed.data || !parsed.meta.fields || parsed.meta.fields.length <= 1) {
+                ui.dataParsePreview.innerHTML = `<p class="text-red-400 p-2">Não foi possível dividir as colunas. Tente o outro separador.</p>`;
+                return;
+            }
+            const previewHeaders = parsed.meta.fields;
+            const previewData = parsed.data.slice(0, 4);
+            let tableHTML = `<table class="w-full text-xs text-left text-gray-400"><thead class="text-gray-300"><tr class="bg-gray-700">`;
+            previewHeaders.forEach(h => { tableHTML += `<th class="p-2 font-semibold border-b border-gray-600">${h}</th>`; });
+            tableHTML += `</tr></thead><tbody>`;
+            previewData.forEach(row => {
+                tableHTML += `<tr class="border-b border-gray-800">`;
+                previewHeaders.forEach(h => { tableHTML += `<td class="p-2">${row[h] || ''}</td>`; });
+                tableHTML += `</tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            ui.dataParsePreview.innerHTML = tableHTML;
+        }
+
+        ui.confirmSeparatorBtn.addEventListener('click', () => {
+            const selectedDelimiter = document.querySelector('input[name="delimiter"]:checked').value;
+            showStatus('Processando arquivo completo...', true);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                Papa.parse(e.target.result, {
+                    header: true, skipEmptyLines: true, delimiter: selectedDelimiter, dynamicTyping: true,
+                    complete: (results) => {
+                        appState[activePageKey].headers = results.meta.fields; 
+                        appState[activePageKey].rawData = results.data;
+                        showStatus('', false);
+                        setupColumnMapping();
+                        appState[activePageKey].step = 2;
+                        renderCurrentPage();
+                    }
+                });
+            };
+            reader.readAsText(currentFile, 'UTF-8');
+        });
+
+        function setupColumnMapping() {
+            const headers = appState[activePageKey].headers;
+            const allFields = { date: 'Data*', open: 'Abertura*', high: 'Máxima*', low: 'Mínima*', close: 'Fechamento*' };
+            ui.mappingUI.innerHTML = '';
+            Object.keys(allFields).forEach(key => {
+                const label = allFields[key];
+                let selectHTML = `<div class="flex flex-col"><label for="select-${key}" class="block mb-2 text-sm font-medium text-gray-300">${label}</label><select id="select-${key}" data-field="${key}" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"><option value="">Selecione</option>`;
+                let suggestedHeader = findSuggestedHeader(key, headers);
+                headers.forEach(header => { selectHTML += `<option value="${header}" ${header === suggestedHeader ? 'selected' : ''}>${header}</option>`; });
+                selectHTML += `</select></div>`;
+                ui.mappingUI.innerHTML += selectHTML;
+            });
+        }
+        
+        ui.confirmMappingBtn.addEventListener('click', () => {
+            const mapping = {}, requiredFields = ['date', 'open', 'high', 'low', 'close'];
+            let missingFields = [];
+            ui.mappingUI.querySelectorAll('select').forEach(select => {
+                const field = select.dataset.field, value = select.value;
+                mapping[field] = value;
+                if (requiredFields.includes(field) && !value) missingFields.push(field);
+            });
+            if (missingFields.length > 0) {
+                showError(ui.step2Error, `Todos os campos marcados com * (Data, Abertura, Máxima, Mínima, Fechamento) são necessários.`); return;
+            }
+            
+            try {
+                const rawData = appState[activePageKey].rawData;
+                appState[activePageKey].mappedData = rawData.map((row) => {
+                    const date = parseDate(row[mapping.date]);
+                    if (!date) return null;
+                    const close = parseFloat(String(row[mapping.close] || '0').replace(',', '.'));
+                    const open = parseFloat(String(row[mapping.open] || '0').replace(',', '.'));
+                    const high = parseFloat(String(row[mapping.high] || '0').replace(',', '.'));
+                    const low = parseFloat(String(row[mapping.low] || '0').replace(',', '.'));
+                    if ([close, open, high, low].some(isNaN)) return null;
+                    return { date, open, high, low, close };
+                }).filter(d => d !== null).sort((a, b) => a.date - b.date);
+
+                if (appState[activePageKey].mappedData.length < 10) {
+                    showError(ui.step2Error, `Dados insuficientes após validação. Pelo menos 10 linhas válidas são necessárias. Verifique o seu arquivo CSV e o mapeamento.`);
+                    return;
+                }
+
+                hideError(ui.step2Error);
+                appState[activePageKey].step = 3;
+                renderCurrentPage();
+            } catch(e) { showError(ui.step2Error, `Erro ao validar dados: ${e.message}.`); }
+        });
+        
+        function renderEditableTable() {
+            const mappedData = appState[activePageKey].mappedData;
+            let tableHTML = `<thead class="text-xs text-gray-200 uppercase bg-gray-600 sticky top-0"><tr>
+                <th class="px-6 py-3">Data (AAAA-MM-DD)</th><th class="px-6 py-3">Abertura</th>
+                <th class="px-6 py-3">Máxima</th><th class="px-6 py-3">Mínima</th>
+                <th class="px-6 py-3">Fechamento</th></tr></thead><tbody>`;
+            
+            mappedData.forEach((row, index) => {
+                const dateStr = row.date instanceof Date && !isNaN(row.date) ? row.date.toISOString().split('T')[0] : '';
+                tableHTML += `<tr class="data-row hover:bg-gray-700/50">
+                    <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="date">${dateStr}</td>
+                    <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="open">${row.open.toFixed(2)}</td>
+                    <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="high">${row.high.toFixed(2)}</td>
+                    <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="low">${row.low.toFixed(2)}</td>
+                    <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="close">${row.close.toFixed(2)}</td>
+                </tr>`;
+            });
+            ui.dataPreview.innerHTML = tableHTML + '</tbody>';
+        }
+
+        ui.addNewRowBtn.addEventListener('click', () => {
+            const tbody = ui.dataPreview.querySelector('tbody');
+            const lastRow = tbody.querySelector('tr:last-child');
+            let newDate = new Date();
+
+            if (lastRow) {
+                const lastDateText = lastRow.cells[0].textContent;
+                const lastDate = parseDate(lastDateText);
+                if (lastDate) {
+                    newDate = new Date(lastDate.setDate(lastDate.getDate() + 1));
+                }
+            }
+            
+            const newDateStr = newDate.toISOString().split('T')[0];
+
+            const newRow = document.createElement('tr');
+            newRow.className = 'data-row hover:bg-gray-700/50';
+            newRow.innerHTML = `
+                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="date">${newDateStr}</td>
+                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="open">0.00</td>
+                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="high">0.00</td>
+                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="low">0.00</td>
+                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="close">0.00</td>
+            `;
+            tbody.appendChild(newRow);
+            newRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            showStatusMessage('Nova linha adicionada no final. Preencha os valores e rode o backtest novamente.', 'success');
+        });
+
+
+        function updateMappedDataFromTable() {
+            const tableRows = ui.dataPreview.querySelectorAll('tbody tr');
+            const newMappedData = [];
+            let errorFound = false;
+            tableRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const dateText = cells[0].textContent.trim();
+                const openText = cells[1].textContent.trim();
+                const highText = cells[2].textContent.trim();
+                const lowText = cells[3].textContent.trim();
+                const closeText = cells[4].textContent.trim();
+                const date = parseDate(dateText);
+
+                const open = parseFloat(openText.replace(',', '.'));
+                const high = parseFloat(highText.replace(',', '.'));
+                const low = parseFloat(lowText.replace(',', '.'));
+                const close = parseFloat(closeText.replace(',', '.'));
+
+                if (!date || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+                    errorFound = true;
+                } else {
+                    newMappedData.push({ date, open, high, low, close });
+                }
+            });
+             if (errorFound) {
+                 showStatusMessage('Foram encontradas linhas com dados inválidos na tabela. Elas foram ignoradas. Verifique a sua tabela.', 'error');
+             }
+
+            appState[activePageKey].mappedData = newMappedData.sort((a, b) => a.date - b.date);
+        }
+
+        // --- LÓGICA DE BACKTEST E ANÁLISE ---
+
+        function formatCurrency(value, currency = 'BRL') { 
+            const locale = currency === 'USD' ? 'en-US' : 'pt-BR';
+            return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value); 
+        }
+
+        ui.runBacktestBtn.addEventListener('click', () => {
+            updateMappedDataFromTable();
+            const smaPeriod = parseInt(ui.smaPeriodInput.value);
+            const market = markets[activePageKey];
+            const contractSize = parseFloat(ui.contractSizeInput.value);
+            const mappedData = appState[activePageKey].mappedData;
+
+            if (mappedData.length < smaPeriod) {
+                showStatusMessage(`Dados insuficientes para o período da média móvel. São necessários pelo menos ${smaPeriod} dias de dados.`, 'error');
+                return;
+            }
+
+            const dataWithSma = calculateSMA(mappedData, smaPeriod);
+            const result = generateSignals(dataWithSma, contractSize);
+            const trades = result.trades;
+            const stats = calculateStats(trades);
+            
+            displayResults(stats, dataWithSma, trades, market);
+            appState[activePageKey].hasBacktestRun = true;
+            saveStateToLocalStorage();
+            renderCurrentPage();
+            ui.resultsSection.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        function findSuggestedHeader(fieldKey, headerList) {
+            const suggestions = { date: ['date', 'data', 'time'], open: ['open', 'abertura'], high: ['high', 'maxima', 'máxima'], low: ['low', 'minima', 'mínima'], close: ['close', 'last', 'fechamento'] };
+            if (!headerList) return '';
+            const lowerHeaderList = headerList.map(h => String(h).toLowerCase());
+            for (const suggestion of suggestions[fieldKey]) {
+                const index = lowerHeaderList.findIndex(h => h.includes(suggestion));
+                if (index !== -1) return headerList[index];
+            }
+            return '';
+        }
+
+        function parseDate(dateString) {
+            if (!dateString) return null;
+            const formats = [
+                (ds) => new Date(String(ds).trim() + "T12:00:00Z"), 
+                (ds) => { const parts = ds.split('/'); if(parts.length === 3 && parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00Z`); return null; }, 
+                (ds) => { const parts = ds.split('-'); if(parts.length === 3 && parts[0].length === 4) return new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00Z`); return null; }
+            ];
+            for (const format of formats) {
+                try {
+                    const d = format(dateString);
+                    if (d && !isNaN(d.getTime())) return d;
+                } catch(e) { /* ignora */ }
+            }
+            return null;
+        }
+
+        function calculateSMA(data, period) { return data.map((row, index, arr) => (index < period - 1) ? { ...row, sma: null } : { ...row, sma: arr.slice(index - period + 1, index + 1).reduce((acc, curr) => acc + curr.close, 0) / period }); }
+        
+        function generateSignals(data, contractSize, initialPosition = 'FLAT') {
+            const trades = [];
+            let position = initialPosition; 
+            let entryPrice = 0; 
+            let cumulativeProfit = 0;
+            
+            if (position !== 'FLAT' && data.length > 0) {
+                entryPrice = data[0].open;
+            }
+
+            for (let i = 1; i < data.length; i++) {
+                const prev = data[i - 1], curr = data[i];
+                if (!prev.sma || !curr.sma) continue;
+
+                const crossUp = prev.close < prev.sma && curr.close > curr.sma;
+                const crossDown = prev.close > prev.sma && curr.close < curr.sma;
+
+                if (crossUp) {
+                    if (position === 'SHORT') {
+                        const profit = (entryPrice - curr.close) * contractSize;
+                        cumulativeProfit += profit;
+                        trades.push({ type: 'BUY', signal: 'REVERSE', contracts: 2, date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
+                    } else if (position === 'FLAT') {
+                        trades.push({ type: 'BUY', signal: 'ENTRY', contracts: 1, date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
+                    }
+                    position = 'LONG'; entryPrice = curr.close;
+                } else if (crossDown) {
+                    if (position === 'LONG') {
+                        const profit = (curr.close - entryPrice) * contractSize;
+                        cumulativeProfit += profit;
+                        trades.push({ type: 'SELL', signal: 'REVERSE', contracts: 2, date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
+                    } else if (position === 'FLAT') {
+                        trades.push({ type: 'SELL', signal: 'ENTRY', contracts: 1, date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
+                    }
+                    position = 'SHORT'; entryPrice = curr.close;
+                }
+            }
+            return { trades, finalPosition: position, finalEntryPrice: entryPrice, cumulativeProfit };
+        }
+
+        function calculateStats(trades) {
+            if (!trades || trades.length === 0) {
+                return { totalProfit: 0, winRate: 0, maxDrawdown: 0, totalTrades: 0, equityCurve: [], equityDates: [] };
+            }
+            const totalProfit = trades[trades.length - 1].equity;
+            const totalTrades = trades.length;
+            
+            const closedTrades = trades.filter(t => t.signal === 'REVERSE');
+            const profitableClosedTrades = closedTrades.filter(r => r.profit > 0).length;
+            const winRate = closedTrades.length > 0 ? (profitableClosedTrades / closedTrades.length) * 100 : 0;
+
+            const equityCurve = trades.map(t => t.equity);
+            const equityDates = trades.map(t => t.date);
+            const fullEquityCurve = [0, ...equityCurve];
+            let peak = 0;
+            let maxDrawdown = 0;
+            fullEquityCurve.forEach(equity => {
+                if (equity > peak) peak = equity;
+                const drawdown = peak - equity;
+                if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+            });
+            return { totalProfit, winRate, maxDrawdown, totalTrades, equityCurve, equityDates };
+        }
+        
+        function displayResults(stats, data, trades, market) {
+            const currencyFormatter = (value) => formatCurrency(value, market.currency);
+            ui.statsContainer.innerHTML = `<div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Lucro/Prejuízo Total</p><p class="text-2xl font-bold ${stats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${currencyFormatter(stats.totalProfit)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Taxa de Acerto (Reversões)</p><p class="text-2xl font-bold text-blue-400">${stats.winRate.toFixed(2)}%</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Drawdown Máximo</p><p class="text-2xl font-bold text-red-400">${currencyFormatter(stats.maxDrawdown)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Sinais de Operação</p><p class="text-2xl font-bold text-yellow-400">${stats.totalTrades}</p></div>`;
+            displayPriceChart(data, trades); 
+            displayEquityChart(stats.equityCurve, stats.equityDates, market.currency, 'equityChart');
+        }
+        
+        function displayPriceChart(data, trades) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if (priceChart) priceChart.destroy();
+            const candlestickData = data.map(d => ({ x: d.date.getTime(), o: d.open, h: d.high, l: d.low, c: d.close }));
+            const smaData = data.filter(d => d.sma).map(d => ({ x: d.date.getTime(), y: d.sma }));
+            const buySignals = trades.filter(t => t.type === 'BUY').map(t => ({x: t.date.getTime(), y: t.price}));
+            const sellSignals = trades.filter(t => t.type === 'SELL').map(t => ({x: t.date.getTime(), y: t.price}));
+            priceChart = new Chart(ctx, {
+                type: 'candlestick', data: {
+                    datasets: [{ label: 'Preço OHLC', data: candlestickData, color: { up: 'rgba(59, 130, 246, 0.8)', down: 'rgba(239, 68, 68, 0.8)', unchanged: 'rgba(107, 114, 128, 0.8)' } },
+                                { label: `SMA(${ui.smaPeriodInput.value})`, type: 'line', data: smaData, borderColor: 'rgb(250, 204, 21)', borderWidth: 1.5, pointRadius: 0, },
+                                { label: 'Sinais de Compra', type: 'scatter', data: buySignals, backgroundColor: 'rgba(34, 197, 94, 1)', borderColor: 'rgba(255,255,255,0.7)', borderWidth: 1, pointStyle: 'triangle', rotation: 0, radius: 7, hoverRadius: 10, order: -1 },
+                                { label: 'Sinais de Venda', type: 'scatter', data: sellSignals, backgroundColor: 'rgba(239, 68, 68, 1)', borderColor: 'rgba(255,255,255,0.7)', borderWidth: 1, pointStyle: 'triangle', rotation: 180, radius: 7, hoverRadius: 10, order: -1 }]
+                }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } },
+                plugins: { legend: { labels: { color: '#d1d5db' } }, tooltip: { mode: 'index', intersect: false }, zoom: { pan: { enabled: true, mode: 'x', threshold: 10, }, zoom: { wheel: { enabled: true, }, drag: { enabled: false, }, pinch: { enabled: true }, mode: 'x', } } } }
+            });
+        }
+        
+        function displayEquityChart(equityData, dates, currency, chartId) {
+            const chartCanvas = document.getElementById(chartId);
+            if (!chartCanvas) return;
+
+            const chartMap = { 'equityChart': equityChart };
+            let chartInstance = chartMap[chartId];
+            
+            if (chartInstance) chartInstance.destroy();
+            
+            if (!dates || dates.length === 0) {
+                 if (chartId === 'equityChart') equityChart = null;
+                return;
+            };
+
+            const newChart = new Chart(chartCanvas.getContext('2d'), { 
+                type: 'line', 
+                data: { 
+                    datasets: [{ 
+                        label: 'Património Acumulado', 
+                        data: dates.map((d, i) => ({x: d.getTime(), y: equityData[i]})), 
+                        borderColor: 'rgb(34, 197, 94)', 
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)', 
+                        borderWidth: 2, 
+                        pointRadius: 1, 
+                        fill: true, 
+                        tension: 0.1 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, 
+                        y: { 
+                            ticks: { color: '#9ca3af', callback: v => formatCurrency(v, currency) }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }, 
+                            title: { display: true, text: `Património (${currency})`, color: '#d1d5db'} 
+                        } 
+                    }, 
+                    plugins: { legend: { labels: { color: '#d1d5db' } } } 
+                } 
+            });
+            
+            if (chartId === 'equityChart') equityChart = newChart;
+        }
+
+        // --- FUNÇÕES UTILITÁRIAS ---
+        function showStatus(message, isLoading) { ui.fileStatus.classList.remove('hidden'); ui.fileStatus.innerHTML = isLoading ? `<div class="flex items-center"><div class="loader mr-2"></div><p>${message}</p></div>` : `<p>${message}</p>`; }
+        function showStatusMessage(message, type = 'info') {
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
+            ui.statusMessage.innerHTML = `<p class="${color}">${message}</p>`;
+            setTimeout(() => { ui.statusMessage.innerHTML = ''; }, 5000);
+        }
+        function showError(element, message) { element.textContent = message; element.classList.remove('hidden'); }
+        function hideError(element) { element.classList.add('hidden'); }
+        
+        /**
+         * Inicializa a aplicação.
+         */
+        function initApp() {
+            loadStateFromLocalStorage();
+            createPageTabs();
+            switchPage(activePageKey);
+        }
+        
+        // Inicia a aplicação quando o script é carregado
+        initApp();
+
+    </script>
+</body>
+</html>
