@@ -39,6 +39,15 @@
         .prose strong { color: #f0fdf4; }
         .prose ul > li::before { background-color: #6ee7b7; }
         .probability-table-container { max-height: 600px; overflow-y: auto; }
+        /* Estilos para abas principais da ferramenta */
+        .main-tool-tab {
+            transition: all 0.2s ease-in-out;
+            border-bottom: 2px solid transparent;
+        }
+        .main-tool-tab.active {
+            border-bottom-color: #4f46e5;
+            color: #ffffff;
+        }
         .page-tab { transition: all 0.2s ease-in-out; }
         .page-tab.active { background-color: #4f46e5; color: white; }
     </style>
@@ -47,142 +56,169 @@
 
     <div class="max-w-7xl mx-auto">
         <header class="text-center mb-6">
-            <h1 id="mainTitle" class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Backtest de Média Móvel</h1>
-            <p class="text-gray-400 mt-2">Plataforma de backtest multi-mercado.</p>
+            <h1 id="mainTitle" class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Plataforma de Análise de Mercado</h1>
+            <p class="text-gray-400 mt-2">Ferramentas de Backtest e Análise Gráfica para Contratos Futuros.</p>
         </header>
 
-        <!-- NAVEGAÇÃO POR PÁGINAS/ATIVOS -->
-        <nav class="mb-8 p-2 bg-gray-800 rounded-lg shadow-md">
-            <div id="pageTabs" class="flex flex-wrap items-center justify-center gap-2">
-                <!-- As abas serão geradas aqui pelo JS -->
-            </div>
+        <!-- NAVEGAÇÃO PRINCIPAL DAS FERRAMENTAS -->
+        <nav class="mb-8 flex justify-center border-b border-gray-700">
+            <button id="mainTabBacktest" class="main-tool-tab text-lg font-semibold py-3 px-6 text-gray-400 hover:text-white">Backtest de Média Móvel</button>
+            <button id="mainTabCorridor" class="main-tool-tab text-lg font-semibold py-3 px-6 text-gray-400 hover:text-white">Análise de Corredor de Tendência</button>
         </nav>
 
-        <div class="relative">
-            <!-- BOTÃO DE RECOMEÇAR -->
-            <button id="resetPageBtn" title="Limpar todos os dados e recomeçar a análise para este ativo." class="absolute top-0 right-0 z-10 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                <span>Recomeçar Análise</span>
-            </button>
-            <div id="mainContent" class="space-y-8">
-            <!-- Etapa 1: Carregar Arquivo -->
-            <div id="step1" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
-                <div class="flex items-center mb-4">
-                    <div class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1</div>
-                    <h2 class="text-2xl font-semibold ml-4">Fonte de Dados</h2>
+        <!-- CONTEÚDO DA FERRAMENTA DE BACKTEST (EXISTENTE) -->
+        <div id="backtestPage">
+            <!-- NAVEGAÇÃO POR ATIVOS -->
+            <nav class="mb-8 p-2 bg-gray-800 rounded-lg shadow-md">
+                <div id="pageTabs" class="flex flex-wrap items-center justify-center gap-2">
+                    <!-- As abas de ativos (BGI, CCM, etc) serão geradas aqui pelo JS -->
                 </div>
-                <p class="text-gray-400 mb-4">Inicie carregando um novo arquivo CSV para este ativo.</p>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <div id="uploadArea" class="flex-1">
-                        <input type="file" id="csvFile" accept=".csv" class="hidden">
-                        <label for="csvFile" class="w-full h-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center justify-center transition">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            <span>Carregar Novo CSV</span>
-                        </label>
-                    </div>
-                </div>
-                <div id="fileStatus" class="mt-4 text-gray-300 hidden"></div>
-                <div id="step1Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
-            </div>
+            </nav>
 
-            <!-- Etapa 1.5: Confirmar Separador -->
-            <div id="separatorStep" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
-                <div class="flex items-center mb-4">
-                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1.5</div>
-                    <h2 class="text-2xl font-semibold ml-4">Confirmar Separador de Coluna</h2>
-                </div>
-                <p class="text-gray-400 mb-4">Escolha o separador para que os dados na tabela abaixo fiquem corretamente divididos em colunas.</p>
-                <div id="delimiterOptions" class="flex flex-wrap gap-x-6 gap-y-2 items-center mb-4">
-                    <label class="flex items-center space-x-2 text-white cursor-pointer">
-                        <input type="radio" name="delimiter" value="," class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
-                        <span>Vírgula ( , )</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-white cursor-pointer">
-                        <input type="radio" name="delimiter" value=";" class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
-                        <span>Ponto e vírgula ( ; )</span>
-                    </label>
-                </div>
-                <p class="text-gray-400 mb-2 font-semibold">Pré-visualização dos Dados:</p>
-                <div id="dataParsePreview" class="bg-gray-900 p-2 rounded-md overflow-x-auto"></div>
-                <button id="confirmSeparatorBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
-                    Confirmar Separador e Continuar
+            <div class="relative">
+                <!-- BOTÃO DE RECOMEÇAR -->
+                <button id="resetPageBtn" title="Limpar todos os dados e recomeçar a análise para este ativo." class="absolute top-0 right-0 z-10 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span>Recomeçar Análise</span>
                 </button>
-            </div>
-
-            <!-- Etapa 2: Mapear Colunas -->
-            <div id="step2" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
-                <div class="flex items-center mb-4">
-                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">2</div>
-                    <h2 class="text-2xl font-semibold ml-4">Mapear Colunas</h2>
-                </div>
-                <p class="text-gray-400 mb-6">Associe as colunas detetadas com os campos necessários. <strong class="text-gray-200">Data, Abertura, Máxima, Mínima, e Fechamento</strong> são necessários para o gráfico de candlestick.</p>
-                <div id="mappingUI" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"></div>
-                <div id="step2Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
-                <button id="confirmMappingBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
-                    Confirmar Mapeamento e Validar
-                </button>
-            </div>
-
-            <!-- Etapa 3: Planilha de Dados e Execução -->
-            <div id="step3" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
-                <div class="flex items-center mb-4">
-                    <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">3</div>
-                    <h2 class="text-2xl font-semibold ml-4">Configuração e Execução</h2>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label for="smaPeriod" class="block mb-2 text-sm font-medium text-gray-300">Período da Média Móvel (para Backtest Simples)</label>
-                        <div class="flex items-center gap-2">
-                           <input type="number" id="smaPeriod" value="21" min="2" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                <div id="mainContent" class="space-y-8">
+                    <!-- Etapa 1: Carregar Arquivo -->
+                    <div id="step1" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-blue-500 shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-blue-500 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1</div>
+                            <h2 class="text-2xl font-semibold ml-4">Fonte de Dados</h2>
                         </div>
+                        <p class="text-gray-400 mb-4">Inicie carregando um novo arquivo CSV para este ativo.</p>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <div id="uploadArea" class="flex-1">
+                                <input type="file" id="csvFile" accept=".csv" class="hidden">
+                                <label for="csvFile" class="w-full h-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center justify-center transition">
+                                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    <span>Carregar Novo CSV</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="fileStatus" class="mt-4 text-gray-300 hidden"></div>
+                        <div id="step1Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
                     </div>
+
+                    <!-- Etapa 1.5: Confirmar Separador -->
+                    <div id="separatorStep" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                         <div class="flex items-center mb-4">
+                            <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">1.5</div>
+                            <h2 class="text-2xl font-semibold ml-4">Confirmar Separador de Coluna</h2>
+                        </div>
+                        <p class="text-gray-400 mb-4">Escolha o separador para que os dados na tabela abaixo fiquem corretamente divididos em colunas.</p>
+                        <div id="delimiterOptions" class="flex flex-wrap gap-x-6 gap-y-2 items-center mb-4">
+                            <label class="flex items-center space-x-2 text-white cursor-pointer">
+                                <input type="radio" name="delimiter" value="," class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                                <span>Vírgula ( , )</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-white cursor-pointer">
+                                <input type="radio" name="delimiter" value=";" class="form-radio bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                                <span>Ponto e vírgula ( ; )</span>
+                            </label>
+                        </div>
+                        <p class="text-gray-400 mb-2 font-semibold">Pré-visualização dos Dados:</p>
+                        <div id="dataParsePreview" class="bg-gray-900 p-2 rounded-md overflow-x-auto"></div>
+                        <button id="confirmSeparatorBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                            Confirmar Separador e Continuar
+                        </button>
+                    </div>
+
+                    <!-- Etapa 2: Mapear Colunas -->
+                    <div id="step2" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">2</div>
+                            <h2 class="text-2xl font-semibold ml-4">Mapear Colunas</h2>
+                        </div>
+                        <p class="text-gray-400 mb-6">Associe as colunas detetadas com os campos necessários. <strong class="text-gray-200">Data, Abertura, Máxima, Mínima, e Fechamento</strong> são necessários para o gráfico de candlestick.</p>
+                        <div id="mappingUI" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+                        <div id="step2Error" class="mt-4 text-red-400 hidden p-3 bg-red-900/50 rounded-lg"></div>
+                        <button id="confirmMappingBtn" class="mt-6 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                            Confirmar Mapeamento e Validar
+                        </button>
+                    </div>
+
+                    <!-- Etapa 3: Planilha de Dados e Execução -->
+                    <div id="step3" class="step-card bg-gray-800 p-6 rounded-lg border-l-4 border-gray-600 shadow-lg">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-gray-600 text-white rounded-full h-8 w-8 flex items-center justify-center font-bold">3</div>
+                            <h2 class="text-2xl font-semibold ml-4">Configuração e Execução</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="smaPeriod" class="block mb-2 text-sm font-medium text-gray-300">Período da Média Móvel (para Backtest Simples)</label>
+                                <div class="flex items-center gap-2">
+                                   <input type="number" id="smaPeriod" value="21" min="2" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="contractSize" id="contractSizeLabel" class="block mb-2 text-sm font-medium text-gray-300">Tamanho do Contrato</label>
+                                <input type="number" id="contractSize" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readonly>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-4 mb-4">
+                            <button id="addNewRowBtn" title="Adicionar uma nova linha de dados no final da tabela" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
+                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                Adicionar Nova Linha
+                            </button>
+                        </div>
+                        <div id="statusMessage" class="mb-4"></div>
+                        <h3 class="font-semibold text-lg mb-2 text-gray-300">Dados para o Backtest (Editável)</h3>
+                        <div class="data-table-container rounded-lg border border-gray-700">
+                            <table id="dataPreview" class="min-w-full text-sm text-left text-gray-300 bg-gray-800"></table>
+                        </div>
+                        <button id="runBacktestBtn" class="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg">
+                            Rodar Backtest Simples
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Seção de Resultados do Backtest -->
+            <div id="resultsSection" class="hidden mt-12">
+                <h2 id="resultsTitle" class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Resultados do Backtest</h2>
+                <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg mb-8">
+                    <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Gráfico Interativo de Preços e Sinais</h3>
+                    <div class="chart-container"><canvas id="priceChart"></canvas></div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    <div id="statsSection" class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+                        <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Estatísticas Principais</h3>
+                        <div id="statsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+                        <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Curva de Património</h3>
+                        <div class="chart-container" style="height: 400px"><canvas id="equityChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO DA NOVA FERRAMENTA DE CORREDOR DE TENDÊNCIA -->
+        <div id="corridorPage" class="hidden">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-cyan-500">Análise de Corredor de Tendência</h2>
+                <div id="corridorConfig" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-8 p-4 bg-gray-900/50 rounded-lg">
                     <div>
-                        <label for="contractSize" id="contractSizeLabel" class="block mb-2 text-sm font-medium text-gray-300">Tamanho do Contrato</label>
-                        <input type="number" id="contractSize" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" readonly>
+                        <label for="corridorAssetSelect" class="block mb-2 text-sm font-medium text-gray-300">Selecione o Ativo</label>
+                        <select id="corridorAssetSelect" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5"></select>
                     </div>
+                     <div>
+                        <label for="corridorWindow" class="block mb-2 text-sm font-medium text-gray-300">Janela de Análise (dias)</label>
+                        <input type="number" id="corridorWindow" value="30" min="5" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5">
+                    </div>
+                    <button id="runCorridorAnalysisBtn" class="w-full md:w-auto bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 px-8 rounded-lg transition">Analisar Corredor</button>
                 </div>
-
-                <div class="flex flex-wrap gap-4 mb-4">
-                    <button id="addNewRowBtn" title="Adicionar uma nova linha de dados no final da tabela" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition">
-                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Adicionar Nova Linha
-                    </button>
-                </div>
-                <div id="statusMessage" class="mb-4"></div>
-                <h3 class="font-semibold text-lg mb-2 text-gray-300">Dados para o Backtest (Editável)</h3>
-                <div class="data-table-container rounded-lg border border-gray-700">
-                    <table id="dataPreview" class="min-w-full text-sm text-left text-gray-300 bg-gray-800"></table>
-                </div>
-                <button id="runBacktestBtn" class="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition text-lg">
-                    Rodar Backtest Simples
-                </button>
-            </div>
-            </div>
-        </div>
-        
-        <div id="analysisContent">
-        <!-- Seção de Resultados -->
-        <div id="resultsSection" class="hidden mt-12">
-            <h2 id="resultsTitle" class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Resultados do Backtest</h2>
-            <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg mb-8">
-                <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Gráfico Interativo de Preços e Sinais</h3>
-                <div class="chart-container"><canvas id="priceChart"></canvas></div>
-            </div>
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div id="statsSection" class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-                    <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Estatísticas Principais</h3>
-                    <div id="statsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-                </div>
-                <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-                    <h3 class="font-semibold text-lg mb-4 text-center text-gray-200">Curva de Património</h3>
-                    <div class="chart-container" style="height: 400px"><canvas id="equityChart"></canvas></div>
+                 <div id="corridorMessage" class="mb-4 text-center"></div>
+                <div class="chart-container bg-gray-900/50 p-4 rounded-lg">
+                    <canvas id="corridorChart"></canvas>
                 </div>
             </div>
         </div>
-
-        </div>
-
 
     </div>
 
@@ -201,7 +237,7 @@
         // escopo global para estado da aplicação, gráficos e arquivo atual
         let appState = {};
         let activePageKey = 'bgi';
-        let priceChart = null, equityChart = null, wfaEquityChart = null, mcChart = null, currentFile = null;
+        let priceChart = null, equityChart = null, corridorChart = null, currentFile = null;
         
         // Definição dos mercados disponíveis na plataforma
         const markets = {
@@ -216,6 +252,12 @@
         // Mapeamento dos elementos da UI para fácil acesso
         const ui = {
             mainTitle: document.getElementById('mainTitle'),
+            // Abas principais
+            mainTabBacktest: document.getElementById('mainTabBacktest'),
+            mainTabCorridor: document.getElementById('mainTabCorridor'),
+            backtestPage: document.getElementById('backtestPage'),
+            corridorPage: document.getElementById('corridorPage'),
+            // --- Componentes do Backtest ---
             pageTabs: document.getElementById('pageTabs'),
             resetPageBtn: document.getElementById('resetPageBtn'),
             step1: document.getElementById('step1'), 
@@ -241,6 +283,11 @@
             resultsSection: document.getElementById('resultsSection'),
             resultsTitle: document.getElementById('resultsTitle'),
             statsContainer: document.getElementById('statsContainer'),
+             // --- Componentes da Análise de Corredor ---
+            corridorAssetSelect: document.getElementById('corridorAssetSelect'),
+            corridorWindow: document.getElementById('corridorWindow'),
+            runCorridorAnalysisBtn: document.getElementById('runCorridorAnalysisBtn'),
+            corridorMessage: document.getElementById('corridorMessage'),
             // Modal elements
             customModal: document.getElementById('customModal'),
             modalTitle: document.getElementById('modalTitle'),
@@ -265,8 +312,8 @@
         // --- LÓGICA DO MODAL ---
         function showModal(title, message, buttons) {
             ui.modalTitle.textContent = title;
-            ui.modalMessage.innerHTML = message; // Use innerHTML to allow for simple formatting
-            ui.modalActions.innerHTML = ''; // Limpa botões antigos
+            ui.modalMessage.innerHTML = message;
+            ui.modalActions.innerHTML = ''; 
 
             buttons.forEach(btnInfo => {
                 const button = document.createElement('button');
@@ -285,7 +332,7 @@
             ui.customModal.classList.remove('flex');
         }
 
-        // --- GERENCIAMENTO DE ESTADO E PÁGINA ---
+        // --- GERENCIAMENTO DE NAVEGAÇÃO E PÁGINA ---
 
         function saveStateToLocalStorage() {
             localStorage.setItem('appState', JSON.stringify(appState));
@@ -310,6 +357,30 @@
                 activePageKey = savedPage;
             }
         }
+
+        function setupMainTabs() {
+            ui.mainTabBacktest.addEventListener('click', () => switchMainTab('backtest'));
+            ui.mainTabCorridor.addEventListener('click', () => switchMainTab('corridor'));
+        }
+
+        function switchMainTab(tabName) {
+            if (tabName === 'backtest') {
+                ui.backtestPage.classList.remove('hidden');
+                ui.corridorPage.classList.add('hidden');
+                ui.mainTabBacktest.classList.add('active');
+                ui.mainTabCorridor.classList.remove('active');
+                ui.mainTitle.textContent = `Backtest de Média Móvel - ${markets[activePageKey].name}`;
+
+            } else if (tabName === 'corridor') {
+                ui.backtestPage.classList.add('hidden');
+                ui.corridorPage.classList.remove('hidden');
+                ui.mainTabBacktest.classList.remove('active');
+                ui.mainTabCorridor.classList.add('active');
+                ui.mainTitle.textContent = 'Análise de Corredor de Tendência';
+                setupCorridorTool();
+            }
+        }
+
 
         function createPageTabs() {
             ui.pageTabs.innerHTML = '';
@@ -340,11 +411,11 @@
             ui.contractSizeInput.value = market.contractSize;
             ui.contractSizeLabel.textContent = `Tamanho do Contrato (${market.unit})`;
             
-            renderCurrentPage();
+            renderCurrentBacktestPage();
             saveStateToLocalStorage();
         }
 
-        function renderCurrentPage() {
+        function renderCurrentBacktestPage() {
             const state = appState[activePageKey];
             
             const allSteps = [ui.step1, ui.separatorStep, ui.step2, ui.step3];
@@ -386,19 +457,13 @@
                 'Confirmar Recomeço',
                 `Tem a certeza de que deseja apagar todos os dados e recomeçar a análise para <strong>${markets[activePageKey].name}</strong>? Esta ação não pode ser desfeita.`,
                 [
-                    { 
-                        text: 'Cancelar', 
-                        class: 'bg-gray-600 hover:bg-gray-500', 
-                        callback: hideModal 
-                    },
+                    { text: 'Cancelar', class: 'bg-gray-600 hover:bg-gray-500', callback: hideModal },
                     { 
                         text: 'Confirmar e Apagar', 
                         class: 'bg-red-600 hover:bg-red-700', 
                         callback: () => {
                             appState[activePageKey] = getInitialPageState();
-                            [priceChart, equityChart].forEach(chart => {
-                                if(chart) chart.destroy();
-                            });
+                            [priceChart, equityChart].forEach(chart => { if(chart) chart.destroy(); });
                             priceChart = equityChart = null;
                             switchPage(activePageKey);
                             hideModal();
@@ -421,7 +486,7 @@
                 autoDetectDelimiterAndSetupPreview();
                 showStatus(`Arquivo "${currentFile.name}" carregado.`, false);
                 appState[activePageKey].step = 1.5;
-                renderCurrentPage();
+                renderCurrentBacktestPage();
             };
             reader.readAsText(currentFile, 'UTF-8');
         });
@@ -477,7 +542,7 @@
                         showStatus('', false);
                         setupColumnMapping();
                         appState[activePageKey].step = 2;
-                        renderCurrentPage();
+                        renderCurrentBacktestPage();
                     }
                 });
             };
@@ -524,13 +589,13 @@
                 }).filter(d => d !== null).sort((a, b) => a.date - b.date);
 
                 if (appState[activePageKey].mappedData.length < 10) {
-                    showError(ui.step2Error, `Dados insuficientes após validação. Pelo menos 10 linhas válidas são necessárias. Verifique o seu arquivo CSV e o mapeamento.`);
+                    showError(ui.step2Error, `Dados insuficientes após validação. Pelo menos 10 linhas válidas são necessárias.`);
                     return;
                 }
 
                 hideError(ui.step2Error);
                 appState[activePageKey].step = 3;
-                renderCurrentPage();
+                renderCurrentBacktestPage();
             } catch(e) { showError(ui.step2Error, `Erro ao validar dados: ${e.message}.`); }
         });
         
@@ -541,7 +606,7 @@
                 <th class="px-6 py-3">Máxima</th><th class="px-6 py-3">Mínima</th>
                 <th class="px-6 py-3">Fechamento</th></tr></thead><tbody>`;
             
-            mappedData.forEach((row, index) => {
+            mappedData.forEach((row) => {
                 const dateStr = row.date instanceof Date && !isNaN(row.date) ? row.date.toISOString().split('T')[0] : '';
                 tableHTML += `<tr class="data-row hover:bg-gray-700/50">
                     <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="date">${dateStr}</td>
@@ -560,29 +625,18 @@
             let newDate = new Date();
 
             if (lastRow) {
-                const lastDateText = lastRow.cells[0].textContent;
-                const lastDate = parseDate(lastDateText);
-                if (lastDate) {
-                    newDate = new Date(lastDate.setDate(lastDate.getDate() + 1));
-                }
+                const lastDate = parseDate(lastRow.cells[0].textContent);
+                if (lastDate) newDate = new Date(lastDate.setDate(lastDate.getDate() + 1));
             }
             
             const newDateStr = newDate.toISOString().split('T')[0];
-
             const newRow = document.createElement('tr');
             newRow.className = 'data-row hover:bg-gray-700/50';
-            newRow.innerHTML = `
-                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="date">${newDateStr}</td>
-                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="open">0.00</td>
-                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="high">0.00</td>
-                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="low">0.00</td>
-                <td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="close">0.00</td>
-            `;
+            newRow.innerHTML = `<td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="date">${newDateStr}</td><td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="open">0.00</td><td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="high">0.00</td><td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="low">0.00</td><td class="px-6 py-2 border-b border-gray-700" contenteditable="true" data-field="close">0.00</td>`;
             tbody.appendChild(newRow);
             newRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
             showStatusMessage('Nova linha adicionada no final. Preencha os valores e rode o backtest novamente.', 'success');
         });
-
 
         function updateMappedDataFromTable() {
             const tableRows = ui.dataPreview.querySelectorAll('tbody tr');
@@ -590,37 +644,25 @@
             let errorFound = false;
             tableRows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                const dateText = cells[0].textContent.trim();
-                const openText = cells[1].textContent.trim();
-                const highText = cells[2].textContent.trim();
-                const lowText = cells[3].textContent.trim();
-                const closeText = cells[4].textContent.trim();
-                const date = parseDate(dateText);
+                const date = parseDate(cells[0].textContent.trim());
+                const open = parseFloat(cells[1].textContent.trim().replace(',', '.'));
+                const high = parseFloat(cells[2].textContent.trim().replace(',', '.'));
+                const low = parseFloat(cells[3].textContent.trim().replace(',', '.'));
+                const close = parseFloat(cells[4].textContent.trim().replace(',', '.'));
 
-                const open = parseFloat(openText.replace(',', '.'));
-                const high = parseFloat(highText.replace(',', '.'));
-                const low = parseFloat(lowText.replace(',', '.'));
-                const close = parseFloat(closeText.replace(',', '.'));
-
-                if (!date || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+                if (!date || [open, high, low, close].some(isNaN)) {
                     errorFound = true;
                 } else {
                     newMappedData.push({ date, open, high, low, close });
                 }
             });
              if (errorFound) {
-                 showStatusMessage('Foram encontradas linhas com dados inválidos na tabela. Elas foram ignoradas. Verifique a sua tabela.', 'error');
+                 showStatusMessage('Foram encontradas linhas com dados inválidos na tabela. Elas foram ignoradas.', 'error');
              }
-
             appState[activePageKey].mappedData = newMappedData.sort((a, b) => a.date - b.date);
         }
 
-        // --- LÓGICA DE BACKTEST E ANÁLISE ---
-
-        function formatCurrency(value, currency = 'BRL') { 
-            const locale = currency === 'USD' ? 'en-US' : 'pt-BR';
-            return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value); 
-        }
+        // --- LÓGICA DE BACKTEST ---
 
         ui.runBacktestBtn.addEventListener('click', () => {
             updateMappedDataFromTable();
@@ -630,61 +672,27 @@
             const mappedData = appState[activePageKey].mappedData;
 
             if (mappedData.length < smaPeriod) {
-                showStatusMessage(`Dados insuficientes para o período da média móvel. São necessários pelo menos ${smaPeriod} dias de dados.`, 'error');
+                showStatusMessage(`Dados insuficientes para o período da média móvel. São necessários pelo menos ${smaPeriod} dias.`, 'error');
                 return;
             }
 
             const dataWithSma = calculateSMA(mappedData, smaPeriod);
             const result = generateSignals(dataWithSma, contractSize);
-            const trades = result.trades;
-            const stats = calculateStats(trades);
+            const stats = calculateStats(result.trades);
             
-            displayResults(stats, dataWithSma, trades, market);
+            displayBacktestResults(stats, dataWithSma, result.trades, market);
             appState[activePageKey].hasBacktestRun = true;
             saveStateToLocalStorage();
-            renderCurrentPage();
+            renderCurrentBacktestPage();
             ui.resultsSection.scrollIntoView({ behavior: 'smooth' });
         });
 
-        function findSuggestedHeader(fieldKey, headerList) {
-            const suggestions = { date: ['date', 'data', 'time'], open: ['open', 'abertura'], high: ['high', 'maxima', 'máxima'], low: ['low', 'minima', 'mínima'], close: ['close', 'last', 'fechamento'] };
-            if (!headerList) return '';
-            const lowerHeaderList = headerList.map(h => String(h).toLowerCase());
-            for (const suggestion of suggestions[fieldKey]) {
-                const index = lowerHeaderList.findIndex(h => h.includes(suggestion));
-                if (index !== -1) return headerList[index];
-            }
-            return '';
-        }
-
-        function parseDate(dateString) {
-            if (!dateString) return null;
-            const formats = [
-                (ds) => new Date(String(ds).trim() + "T12:00:00Z"), 
-                (ds) => { const parts = ds.split('/'); if(parts.length === 3 && parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00Z`); return null; }, 
-                (ds) => { const parts = ds.split('-'); if(parts.length === 3 && parts[0].length === 4) return new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00Z`); return null; }
-            ];
-            for (const format of formats) {
-                try {
-                    const d = format(dateString);
-                    if (d && !isNaN(d.getTime())) return d;
-                } catch(e) { /* ignora */ }
-            }
-            return null;
-        }
-
         function calculateSMA(data, period) { return data.map((row, index, arr) => (index < period - 1) ? { ...row, sma: null } : { ...row, sma: arr.slice(index - period + 1, index + 1).reduce((acc, curr) => acc + curr.close, 0) / period }); }
         
-        function generateSignals(data, contractSize, initialPosition = 'FLAT') {
+        function generateSignals(data, contractSize) {
             const trades = [];
-            let position = initialPosition; 
-            let entryPrice = 0; 
-            let cumulativeProfit = 0;
+            let position = 'FLAT', entryPrice = 0, cumulativeProfit = 0;
             
-            if (position !== 'FLAT' && data.length > 0) {
-                entryPrice = data[0].open;
-            }
-
             for (let i = 1; i < data.length; i++) {
                 const prev = data[i - 1], curr = data[i];
                 if (!prev.sma || !curr.sma) continue;
@@ -696,71 +704,135 @@
                     if (position === 'SHORT') {
                         const profit = (entryPrice - curr.close) * contractSize;
                         cumulativeProfit += profit;
-                        trades.push({ type: 'BUY', signal: 'REVERSE', contracts: 2, date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
+                        trades.push({ type: 'BUY', signal: 'REVERSE', date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
                     } else if (position === 'FLAT') {
-                        trades.push({ type: 'BUY', signal: 'ENTRY', contracts: 1, date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
+                        trades.push({ type: 'BUY', signal: 'ENTRY', date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
                     }
                     position = 'LONG'; entryPrice = curr.close;
                 } else if (crossDown) {
                     if (position === 'LONG') {
                         const profit = (curr.close - entryPrice) * contractSize;
                         cumulativeProfit += profit;
-                        trades.push({ type: 'SELL', signal: 'REVERSE', contracts: 2, date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
+                        trades.push({ type: 'SELL', signal: 'REVERSE', date: curr.date, price: curr.close, profit: profit, equity: cumulativeProfit });
                     } else if (position === 'FLAT') {
-                        trades.push({ type: 'SELL', signal: 'ENTRY', contracts: 1, date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
+                        trades.push({ type: 'SELL', signal: 'ENTRY', date: curr.date, price: curr.close, profit: 0, equity: cumulativeProfit });
                     }
                     position = 'SHORT'; entryPrice = curr.close;
                 }
             }
-            return { trades, finalPosition: position, finalEntryPrice: entryPrice, cumulativeProfit };
+            return { trades, cumulativeProfit };
         }
 
         function calculateStats(trades) {
-            if (!trades || trades.length === 0) {
-                return { totalProfit: 0, winRate: 0, maxDrawdown: 0, totalTrades: 0, equityCurve: [], equityDates: [] };
-            }
+            if (!trades || trades.length === 0) return { totalProfit: 0, winRate: 0, maxDrawdown: 0, totalTrades: 0, equityCurve: [], equityDates: [] };
+            
             const totalProfit = trades[trades.length - 1].equity;
             const totalTrades = trades.length;
-            
             const closedTrades = trades.filter(t => t.signal === 'REVERSE');
-            const profitableClosedTrades = closedTrades.filter(r => r.profit > 0).length;
-            const winRate = closedTrades.length > 0 ? (profitableClosedTrades / closedTrades.length) * 100 : 0;
+            const winRate = closedTrades.length > 0 ? (closedTrades.filter(r => r.profit > 0).length / closedTrades.length) * 100 : 0;
 
             const equityCurve = trades.map(t => t.equity);
             const equityDates = trades.map(t => t.date);
-            const fullEquityCurve = [0, ...equityCurve];
-            let peak = 0;
-            let maxDrawdown = 0;
-            fullEquityCurve.forEach(equity => {
+            let peak = 0, maxDrawdown = 0;
+            [0, ...equityCurve].forEach(equity => {
                 if (equity > peak) peak = equity;
-                const drawdown = peak - equity;
-                if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+                if (peak - equity > maxDrawdown) maxDrawdown = peak - equity;
             });
             return { totalProfit, winRate, maxDrawdown, totalTrades, equityCurve, equityDates };
         }
         
-        function displayResults(stats, data, trades, market) {
+        function displayBacktestResults(stats, data, trades, market) {
             const currencyFormatter = (value) => formatCurrency(value, market.currency);
-            ui.statsContainer.innerHTML = `<div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Lucro/Prejuízo Total</p><p class="text-2xl font-bold ${stats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${currencyFormatter(stats.totalProfit)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Taxa de Acerto (Reversões)</p><p class="text-2xl font-bold text-blue-400">${stats.winRate.toFixed(2)}%</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Drawdown Máximo</p><p class="text-2xl font-bold text-red-400">${currencyFormatter(stats.maxDrawdown)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Sinais de Operação</p><p class="text-2xl font-bold text-yellow-400">${stats.totalTrades}</p></div>`;
+            ui.statsContainer.innerHTML = `<div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Lucro/Prejuízo Total</p><p class="text-2xl font-bold ${stats.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${currencyFormatter(stats.totalProfit)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Taxa de Acerto</p><p class="text-2xl font-bold text-blue-400">${stats.winRate.toFixed(2)}%</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Drawdown Máximo</p><p class="text-2xl font-bold text-red-400">${currencyFormatter(stats.maxDrawdown)}</p></div><div class="bg-gray-700/50 p-4 rounded-lg text-center shadow-lg"><p class="text-sm text-gray-400">Sinais de Operação</p><p class="text-2xl font-bold text-yellow-400">${stats.totalTrades}</p></div>`;
             displayPriceChart(data, trades); 
             displayEquityChart(stats.equityCurve, stats.equityDates, market.currency, 'equityChart');
         }
+
+        // --- LÓGICA DA ANÁLISE DE CORREDOR ---
         
+        function setupCorridorTool() {
+            ui.corridorAssetSelect.innerHTML = '';
+            let hasData = false;
+            Object.keys(markets).forEach(key => {
+                if (appState[key] && appState[key].mappedData.length > 0) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = markets[key].name;
+                    ui.corridorAssetSelect.appendChild(option);
+                    hasData = true;
+                }
+            });
+
+            if (!hasData) {
+                showCorridorMessage('Nenhum dado de ativo foi carregado. Por favor, carregue um arquivo CSV na aba de "Backtest de Média Móvel" primeiro.', 'warning');
+                ui.corridorAssetSelect.innerHTML = '<option>Nenhum dado disponível</option>';
+            } else {
+                 showCorridorMessage('Selecione um ativo e a janela de análise para visualizar o corredor de tendência.', 'info');
+            }
+        }
+
+        function runCorridorAnalysis() {
+            const assetKey = ui.corridorAssetSelect.value;
+            const windowSize = parseInt(ui.corridorWindow.value);
+            
+            if (!assetKey || !appState[assetKey] || appState[assetKey].mappedData.length === 0) {
+                showCorridorMessage('Por favor, selecione um ativo com dados carregados.', 'error');
+                return;
+            }
+            if (isNaN(windowSize) || windowSize < 2) {
+                showCorridorMessage('Por favor, insira uma janela de análise válida (mínimo 2).', 'error');
+                return;
+            }
+            const assetData = appState[assetKey].mappedData;
+            if (assetData.length < windowSize) {
+                showCorridorMessage(`Dados insuficientes para a janela de ${windowSize} dias. O ativo possui apenas ${assetData.length} dias de dados.`, 'error');
+                return;
+            }
+            
+            const corridorData = calculateTrendCorridor(assetData, windowSize);
+            displayCorridorChart(assetData, corridorData, assetKey);
+            showCorridorMessage(`Corredor de tendência para ${markets[assetKey].name} com janela de ${windowSize} dias.`, 'success');
+        }
+
+        function calculateTrendCorridor(data, windowSize) {
+            const upperBand = [];
+            const lowerBand = [];
+
+            for (let i = 0; i < data.length; i++) {
+                if (i < windowSize - 1) {
+                    upperBand.push({ x: data[i].date.getTime(), y: null });
+                    lowerBand.push({ x: data[i].date.getTime(), y: null });
+                } else {
+                    const windowSlice = data.slice(i - windowSize + 1, i + 1);
+                    let maxHigh = -Infinity;
+                    let minLow = Infinity;
+                    windowSlice.forEach(d => {
+                        if (d.high > maxHigh) maxHigh = d.high;
+                        if (d.low < minLow) minLow = d.low;
+                    });
+                    upperBand.push({ x: data[i].date.getTime(), y: maxHigh });
+                    lowerBand.push({ x: data[i].date.getTime(), y: minLow });
+                }
+            }
+            return { upperBand, lowerBand };
+        }
+
+        // --- FUNÇÕES DE GRÁFICO ---
+
         function displayPriceChart(data, trades) {
-            const ctx = document.getElementById('priceChart').getContext('2d');
             if (priceChart) priceChart.destroy();
             const candlestickData = data.map(d => ({ x: d.date.getTime(), o: d.open, h: d.high, l: d.low, c: d.close }));
             const smaData = data.filter(d => d.sma).map(d => ({ x: d.date.getTime(), y: d.sma }));
             const buySignals = trades.filter(t => t.type === 'BUY').map(t => ({x: t.date.getTime(), y: t.price}));
             const sellSignals = trades.filter(t => t.type === 'SELL').map(t => ({x: t.date.getTime(), y: t.price}));
-            priceChart = new Chart(ctx, {
+            priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
                 type: 'candlestick', data: {
                     datasets: [{ label: 'Preço OHLC', data: candlestickData, color: { up: 'rgba(59, 130, 246, 0.8)', down: 'rgba(239, 68, 68, 0.8)', unchanged: 'rgba(107, 114, 128, 0.8)' } },
                                 { label: `SMA(${ui.smaPeriodInput.value})`, type: 'line', data: smaData, borderColor: 'rgb(250, 204, 21)', borderWidth: 1.5, pointRadius: 0, },
-                                { label: 'Sinais de Compra', type: 'scatter', data: buySignals, backgroundColor: 'rgba(34, 197, 94, 1)', borderColor: 'rgba(255,255,255,0.7)', borderWidth: 1, pointStyle: 'triangle', rotation: 0, radius: 7, hoverRadius: 10, order: -1 },
-                                { label: 'Sinais de Venda', type: 'scatter', data: sellSignals, backgroundColor: 'rgba(239, 68, 68, 1)', borderColor: 'rgba(255,255,255,0.7)', borderWidth: 1, pointStyle: 'triangle', rotation: 180, radius: 7, hoverRadius: 10, order: -1 }]
+                                { label: 'Sinais de Compra', type: 'scatter', data: buySignals, backgroundColor: 'rgba(34, 197, 94, 1)', pointStyle: 'triangle', rotation: 0, radius: 7 },
+                                { label: 'Sinais de Venda', type: 'scatter', data: sellSignals, backgroundColor: 'rgba(239, 68, 68, 1)', pointStyle: 'triangle', rotation: 180, radius: 7 }]
                 }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } },
-                plugins: { legend: { labels: { color: '#d1d5db' } }, tooltip: { mode: 'index', intersect: false }, zoom: { pan: { enabled: true, mode: 'x', threshold: 10, }, zoom: { wheel: { enabled: true, }, drag: { enabled: false, }, pinch: { enabled: true }, mode: 'x', } } } }
+                plugins: { legend: { labels: { color: '#d1d5db' } }, tooltip: { mode: 'index', intersect: false }, zoom: { pan: { enabled: true, mode: 'x'}, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x'} } } }
             });
         }
         
@@ -768,64 +840,105 @@
             const chartCanvas = document.getElementById(chartId);
             if (!chartCanvas) return;
 
-            const chartMap = { 'equityChart': equityChart };
-            let chartInstance = chartMap[chartId];
-            
+            let chartInstance = (chartId === 'equityChart') ? equityChart : null;
             if (chartInstance) chartInstance.destroy();
-            
-            if (!dates || dates.length === 0) {
-                 if (chartId === 'equityChart') equityChart = null;
-                return;
-            };
+            if (!dates || dates.length === 0) return;
 
             const newChart = new Chart(chartCanvas.getContext('2d'), { 
-                type: 'line', 
-                data: { 
-                    datasets: [{ 
-                        label: 'Património Acumulado', 
-                        data: dates.map((d, i) => ({x: d.getTime(), y: equityData[i]})), 
-                        borderColor: 'rgb(34, 197, 94)', 
-                        backgroundColor: 'rgba(34, 197, 94, 0.2)', 
-                        borderWidth: 2, 
-                        pointRadius: 1, 
-                        fill: true, 
-                        tension: 0.1 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, 
-                        y: { 
-                            ticks: { color: '#9ca3af', callback: v => formatCurrency(v, currency) }, 
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }, 
-                            title: { display: true, text: `Património (${currency})`, color: '#d1d5db'} 
-                        } 
-                    }, 
-                    plugins: { legend: { labels: { color: '#d1d5db' } } } 
-                } 
+                type: 'line', data: { datasets: [{ label: 'Património Acumulado', data: dates.map((d, i) => ({x: d.getTime(), y: equityData[i]})), borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgba(34, 197, 94, 0.2)', borderWidth: 2, pointRadius: 1, fill: true }] }, 
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { ticks: { color: '#9ca3af', callback: v => formatCurrency(v, currency) }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } }, 
+                plugins: { legend: { labels: { color: '#d1d5db' } } } } 
             });
-            
             if (chartId === 'equityChart') equityChart = newChart;
         }
 
+        function displayCorridorChart(assetData, corridorData, assetKey) {
+            if (corridorChart) corridorChart.destroy();
+            const candlestickData = assetData.map(d => ({ x: d.date.getTime(), o: d.open, h: d.high, l: d.low, c: d.close }));
+            
+            corridorChart = new Chart(document.getElementById('corridorChart').getContext('2d'), {
+                type: 'candlestick',
+                data: {
+                    datasets: [
+                        {
+                            label: `Preço OHLC - ${markets[assetKey].name}`,
+                            data: candlestickData,
+                        },
+                        {
+                            label: 'Banda Superior (Máxima)',
+                            type: 'line',
+                            data: corridorData.upperBand,
+                            borderColor: 'rgba(22, 163, 74, 0.8)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            stepped: true,
+                            fill: '+1' // Preenche até a próxima banda (lowerBand)
+                        },
+                        {
+                            label: 'Banda Inferior (Mínima)',
+                            type: 'line',
+                            data: corridorData.lowerBand,
+                            borderColor: 'rgba(220, 38, 38, 0.8)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            stepped: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } },
+                    plugins: { legend: { labels: { color: '#d1d5db' } }, tooltip: { mode: 'index', intersect: false }, zoom: { pan: { enabled: true, mode: 'x'}, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x'} } }
+                }
+            });
+        }
+
+
         // --- FUNÇÕES UTILITÁRIAS ---
+        function formatCurrency(value, currency = 'BRL') { 
+            const locale = currency === 'USD' ? 'en-US' : 'pt-BR';
+            return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value); 
+        }
         function showStatus(message, isLoading) { ui.fileStatus.classList.remove('hidden'); ui.fileStatus.innerHTML = isLoading ? `<div class="flex items-center"><div class="loader mr-2"></div><p>${message}</p></div>` : `<p>${message}</p>`; }
         function showStatusMessage(message, type = 'info') {
             const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
             ui.statusMessage.innerHTML = `<p class="${color}">${message}</p>`;
             setTimeout(() => { ui.statusMessage.innerHTML = ''; }, 5000);
         }
+        function showCorridorMessage(message, type = 'info') {
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : type === 'warning' ? 'text-yellow-400' : 'text-cyan-400';
+            ui.corridorMessage.innerHTML = `<p class="${color}">${message}</p>`;
+        }
         function showError(element, message) { element.textContent = message; element.classList.remove('hidden'); }
         function hideError(element) { element.classList.add('hidden'); }
+        function findSuggestedHeader(fieldKey, headerList) {
+            const suggestions = { date: ['date', 'data', 'time'], open: ['open', 'abertura'], high: ['high', 'maxima', 'máxima'], low: ['low', 'minima', 'mínima'], close: ['close', 'last', 'fechamento'] };
+            if (!headerList) return '';
+            const lowerHeaderList = headerList.map(h => String(h).toLowerCase());
+            for (const suggestion of suggestions[fieldKey]) {
+                const index = lowerHeaderList.findIndex(h => h.includes(suggestion));
+                if (index !== -1) return headerList[index];
+            }
+            return '';
+        }
+        function parseDate(dateString) {
+            if (!dateString) return null;
+            const formats = [ (ds) => new Date(String(ds).trim() + "T12:00:00Z"), (ds) => { const p = ds.split('/'); if(p.length===3&&p[2].length===4) return new Date(`${p[2]}-${p[1]}-${p[0]}T12:00:00Z`); return null; }, (ds) => { const p = ds.split('-'); if(p.length===3&&p[0].length===4) return new Date(`${p[0]}-${p[1]}-${p[2]}T12:00:00Z`); return null; } ];
+            for (const format of formats) { try { const d = format(dateString); if (d && !isNaN(d.getTime())) return d; } catch(e) {} } return null;
+        }
         
         /**
          * Inicializa a aplicação.
          */
         function initApp() {
             loadStateFromLocalStorage();
+            setupMainTabs();
             createPageTabs();
+            // Listeners para a nova ferramenta
+            ui.runCorridorAnalysisBtn.addEventListener('click', runCorridorAnalysis);
+            // Inicia na aba de backtest por padrão
+            switchMainTab('backtest');
             switchPage(activePageKey);
         }
         
